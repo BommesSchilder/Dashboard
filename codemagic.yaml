@@ -7,27 +7,23 @@ workflows:
       xcode: latest
       cocoapods: default
     scripts:
-      - name: 1. Pakete & Capacitor zwingend installieren
+      - name: 1. Pakete & Capacitor installieren
         script: |
           npm install
           npm install @capacitor/cli @capacitor/core @capacitor/ios capacitor-native-biometric
-      - name: 2. Dummy-Webordner erstellen (verhindert Absturz)
+      - name: 2. Dummy-Webordner erstellen
         script: |
           mkdir -p www
           echo "<html><body>Bommes App</body></html>" > www/index.html
-      - name: 3. iOS-Projekt nativ auf dem Mac bauen
+      - name: 3. iOS-Projekt nativ (mit SPM) generieren
         script: |
           rm -rf ios
           npx cap add ios
-      - name: 4. Apple Workspace (CocoaPods) generieren
-        script: |
           npx cap sync ios
-          cd ios/App
-          pod install
-      - name: 5. Face ID Berechtigung injizieren
+      - name: 4. Face ID Berechtigung injizieren
         script: |
           /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID für den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
-      - name: 6. Compile iOS App
+      - name: 5. Compile iOS App (Xcode Native)
         script: |
           cd ios/App
-          xcodebuild build -workspace App.xcworkspace -scheme App -destination "generic/platform=iOS" CODE_SIGNING_ALLOWED=NO
+          xcodebuild build -project App.xcodeproj -scheme App -destination "generic/platform=iOS" CODE_SIGNING_ALLOWED=NO
