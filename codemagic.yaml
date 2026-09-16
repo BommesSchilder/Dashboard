@@ -9,8 +9,12 @@ workflows:
     scripts:
       - name: Install Dependencies
         script: npm install
-      - name: Sync iOS (Updates Workspace)
+      - name: Sync iOS
         script: npx cap sync ios
+      - name: Create Apple Workspace
+        script: |
+          cd ios/App
+          pod install
       - name: Compile iOS App
         script: |
           cd ios/App
