@@ -3,7 +3,7 @@ workflows:
     name: Bommes Dashboard iOS
     instance_type: mac_mini_m1
     environment:
-      node: 22
+      node: latest
       xcode: latest
       cocoapods: default
     scripts:
