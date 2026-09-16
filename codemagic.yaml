@@ -9,12 +9,14 @@ workflows:
     scripts:
       - name: Install dependencies
         script: npm install
-      - name: Sync iOS
-        script: npx cap sync ios
-      - name: Install CocoaPods
+      - name: Cloud-Native iOS Generation
         script: |
-          cd ios/App
-          pod install
+          rm -rf ios
+          npx cap add ios
+          npx cap sync ios
+      - name: Inject Face ID Permission
+        script: /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID für den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
       - name: Build iOS
         script: |
-          xcodebuild build -workspace ios/App/App.xcworkspace -scheme App -destination generic/platform=iOS CODE_SIGNING_ALLOWED=NO
+          cd ios/App
+          xcodebuild build -workspace App.xcworkspace -scheme App -destination "generic/platform=iOS" CODE_SIGNING_ALLOWED=NO
