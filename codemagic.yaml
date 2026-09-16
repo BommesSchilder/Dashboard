@@ -11,6 +11,10 @@ workflows:
         script: npm install
       - name: Sync iOS
         script: npx cap sync ios
+      - name: Install CocoaPods
+        script: |
+          cd ios/App
+          pod install
       - name: Build iOS
         script: |
           xcodebuild build -workspace ios/App/App.xcworkspace -scheme App -destination generic/platform=iOS CODE_SIGNING_ALLOWED=NO
