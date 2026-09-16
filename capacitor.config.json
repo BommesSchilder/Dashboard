@@ -1,0 +1,8 @@
+{
+  "appId": "de.bommes.dashboard",
+  "appName": "Bommes Dashboard",
+  "webDir": "www",
+  "server": {
+    "url": "https://www.xpress-zulassung.de/backend/dashboard.php"
+  }
+}
