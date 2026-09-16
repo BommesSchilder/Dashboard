@@ -7,16 +7,18 @@ workflows:
       xcode: latest
       cocoapods: default
     scripts:
-      - name: Install dependencies
+      - name: Install Node Dependencies
         script: npm install
-      - name: Cloud-Native iOS Generation
+      - name: Generate iOS Folder
         script: |
           rm -rf ios
           npx cap add ios
           npx cap sync ios
+      - name: Install Apple CocoaPods (Creates Workspace)
+        script: |
+          cd ios/App
+          pod install
       - name: Inject Face ID Permission
         script: /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID für den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
       - name: Build iOS
-        script: |
-          cd ios/App
-          xcodebuild build -workspace App.xcworkspace -scheme App -destination "generic/platform=iOS" CODE_SIGNING_ALLOWED=NO
+        script: xcodebuild build -workspace ios/App/App.xcworkspace -scheme App -destination "generic/platform=iOS" CODE_SIGNING_ALLOWED=NO
