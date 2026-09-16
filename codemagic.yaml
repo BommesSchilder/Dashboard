@@ -3,22 +3,25 @@ workflows:
     name: Bommes Dashboard iOS
     instance_type: mac_mini_m1
     environment:
-      node: latest
+      node: 22
       xcode: latest
       cocoapods: default
     scripts:
-      - name: Install Node Dependencies
-        script: npm install
-      - name: Generate iOS Folder
+      - name: System Cleanup & Prep
+        script: |
+          mkdir -p www
+          npm install
+          npm install @capacitor/ios capacitor-native-biometric
+      - name: Generate Clean iOS Project
         script: |
           rm -rf ios
           npx cap add ios
           npx cap sync ios
-      - name: Install Apple CocoaPods (Creates Workspace)
+      - name: Build Apple Workspace (CocoaPods)
         script: |
           cd ios/App
           pod install
-      - name: Inject Face ID Permission
+      - name: Apply FaceID Security Policy
         script: /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID für den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
-      - name: Build iOS
+      - name: Compile iOS App
         script: xcodebuild build -workspace ios/App/App.xcworkspace -scheme App -destination "generic/platform=iOS" CODE_SIGNING_ALLOWED=NO
