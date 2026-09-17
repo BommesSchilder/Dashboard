@@ -14,10 +14,11 @@ workflows:
         bundle_identifier: de.bommes.dashboard
         
     scripts:
-      - name: 1. Umgebung & Pakete ERZWINGEN
+      - name: 1. Umgebung & Pakete (Downgrade auf stabiles V5)
         script: |
           npm init -y
-          npm install @capacitor/cli @capacitor/core @capacitor/ios capacitor-native-biometric --save
+          # HIER IST DER FIX: Alle Kern-Komponenten und das Plugin auf Version 5 pinnen!
+          npm install @capacitor/cli@5 @capacitor/core@5 @capacitor/ios@5 capacitor-native-biometric@5 --save
           mkdir -p www
           echo "<html><body>Bommes App</body></html>" > www/index.html
       - name: 2. iOS Projekt generieren & Version hochzaehlen
@@ -25,10 +26,11 @@ workflows:
           sed -i '' 's/com.capacitorjs.app/de.bommes.dashboard/g' capacitor.config.json || true
           rm -rf ios
           npx cap add ios
-          npx cap sync ios
-          /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID fuer den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
           
-          # NEU: Zwingt die Build-Nummer automatisch eins hoch, damit Apple das Update akzeptiert!
+          # Sync findet das Plugin jetzt fehlerfrei und baut es ein
+          npx cap sync ios
+          
+          /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID fuer den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/App/App/Info.plist
       - name: 3. Code Signing anwenden
         script: |
