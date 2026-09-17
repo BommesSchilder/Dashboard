@@ -14,28 +14,42 @@ workflows:
         bundle_identifier: de.bommes.dashboard
         
     scripts:
-      - name: 1. Umgebung & Pakete (Downgrade auf stabiles V5)
+      - name: 1. Umgebung & Pakete
         script: |
           npm init -y
-          # HIER IST DER FIX: Alle Kern-Komponenten und das Plugin auf Version 5 pinnen!
-          npm install @capacitor/cli@5 @capacitor/core@5 @capacitor/ios@5 capacitor-native-biometric@5 --save
+          
+          # NEU: Wir schreiben die Capacitor-Konfiguration direkt und fehlerfrei selbst!
+          echo '{
+            "appId": "de.bommes.dashboard",
+            "appName": "Bommes Dashboard",
+            "webDir": "www",
+            "bundledWebRuntime": false
+          }' > capacitor.config.json
+          
           mkdir -p www
           echo "<html><body>Bommes App</body></html>" > www/index.html
+          
+          # Pakete installieren
+          npm install @capacitor/cli@5 @capacitor/core@5 @capacitor/ios@5 capacitor-native-biometric@5 --save
+          
       - name: 2. iOS Projekt generieren & Version hochzaehlen
         script: |
-          sed -i '' 's/com.capacitorjs.app/de.bommes.dashboard/g' capacitor.config.json || true
           rm -rf ios
-          npx cap add ios
           
-          # Sync findet das Plugin jetzt fehlerfrei und baut es ein
-          npx cap sync ios
+          # FIX: Direkter Pfad zur Datei - umgeht jeden npx-Bug!
+          ./node_modules/.bin/cap add ios
+          ./node_modules/.bin/cap sync ios
           
           /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID fuer den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/App/App/Info.plist
+          
+          # Setzt die Version automatisch hoch (TestFlight-Fix)
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD_NUMBER" ios/App/App/Info.plist
+          
       - name: 3. Code Signing anwenden
         script: |
           cd ios/App
           xcode-project use-profiles
+          
       - name: 4. Build (.ipa)
         script: |
           cd ios/App
