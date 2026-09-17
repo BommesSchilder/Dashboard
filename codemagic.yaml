@@ -10,8 +10,11 @@ workflows:
     environment:
       node: latest
       xcode: latest
-      # ios_signing ist hier komplett GELÖSCHT, um den Vorab-Check zu verhindern!
-      
+      # Die Automatik findet das Profil jetzt, weil wir es vorhin erfolgreich erstellt haben!
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: de.bommes.dashboard
+        
     scripts:
       - name: 1. Pakete & Capacitor installieren
         script: |
@@ -29,24 +32,10 @@ workflows:
       - name: 4. Face ID Berechtigung injizieren
         script: |
           /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID für den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
-      - name: 5. Zertifikate generieren & Xcode konfigurieren
+      - name: 5. Code Signing anwenden
         script: |
-          # 1. Bereitet den Schlüsselbund des Cloud-Macs vor
-          keychain initialize
-          
-          # 2. Erzwingt die Neuerstellung des Zertifikats bei Apple!
-          app-store-connect fetch-signing-files "de.bommes.dashboard" --type IOS_APP_STORE --create
-          
-          # 3. Lädt das brandneue Zertifikat in den Schlüsselbund
-          keychain add-certificates
-          
           cd ios/App
-          
-          # 4. Zwingt Apple von Automatik auf Cloud-Signing (Behebt Error 65!)
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' App.xcodeproj/project.pbxproj
-          sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = .*/PRODUCT_BUNDLE_IDENTIFIER = de.bommes.dashboard;/g' App.xcodeproj/project.pbxproj
-          
-          # 5. Verbindet das frisch erstellte Zertifikat final mit der App
+          # Wendet die automatisch geladenen Zertifikate sauber auf das frische Projekt an
           xcode-project use-profiles
       - name: 6. Build (.ipa)
         script: |
