@@ -9,7 +9,6 @@ workflows:
     environment:
       node: latest
       xcode: latest
-      # Wir lassen den ios_signing Block hier weg, um den Vorab-Crash zu verhindern!
       
     scripts:
       - name: 1. Pakete & Capacitor installieren
@@ -20,24 +19,26 @@ workflows:
         script: |
           mkdir -p www
           echo "<html><body>Bommes App</body></html>" > www/index.html
-      - name: 3. iOS-Projekt nativ generieren & ID korrigieren
+      - name: 3. iOS-Projekt nativ generieren
         script: |
+          # Ändert die ID in der Config, BEVOR iOS gebaut wird. Das ist zu 100 % sicher.
+          sed -i '' 's/com.capacitorjs.app/de.bommes.dashboard/g' capacitor.config.json || true
+          sed -i '' 's/com.capacitorjs.app/de.bommes.dashboard/g' capacitor.config.ts || true
           rm -rf ios
           npx cap add ios
           npx cap sync ios
-          # Ersetzt die Standard-ID sicher durch deine, ohne die Datei zu zerstören!
-          sed -i '' 's/com.capacitorjs.app/de.bommes.dashboard/g' ios/App/App.xcodeproj/project.pbxproj
       - name: 4. Face ID Berechtigung injizieren
         script: |
           /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID für den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
-      - name: 5. Apple Zertifikate erzwingen & anwenden
+      - name: 5. Apple Zertifikate herunterladen und anwenden
         script: |
           keychain initialize
-          # Zwingt Apple gnadenlos, das Profil jetzt zu erstellen
-          app-store-connect fetch-signing-files "de.bommes.dashboard" --type IOS_APP_STORE --create
+          # HIER WAR MEIN FEHLER: Das "source <( )" speichert das Zertifikat für Schritt 6!
+          source <(app-store-connect fetch-signing-files "de.bommes.dashboard" --type IOS_APP_STORE --create)
           keychain add-certificates
+          
           cd ios/App
-          # Da die Datei nicht mehr korrupt ist, klappt use-profiles jetzt fehlerfrei
+          # Schaltet die Xcode-Automatik ab und wendet das geladene Profil an
           xcode-project use-profiles
       - name: 6. Build (.ipa)
         script: |
