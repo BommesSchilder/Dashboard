@@ -3,18 +3,14 @@ workflows:
     name: Bommes Dashboard iOS
     instance_type: mac_mini_m1
     
-    # HIER WIEDER DEINEN NAMEN EINTRAGEN:
     integrations:
       app_store_connect: "Codemagic Build Server"
       
     environment:
       node: latest
       xcode: latest
-      # Lädt die Zertifikate als $CM-Variablen in den Hintergrund
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: de.bommes.dashboard
-        
+      # Wir lassen den ios_signing Block hier weg, um den Vorab-Crash zu verhindern!
+      
     scripts:
       - name: 1. Pakete & Capacitor installieren
         script: |
@@ -24,18 +20,29 @@ workflows:
         script: |
           mkdir -p www
           echo "<html><body>Bommes App</body></html>" > www/index.html
-      - name: 3. iOS-Projekt nativ generieren
+      - name: 3. iOS-Projekt nativ generieren & ID korrigieren
         script: |
           rm -rf ios
           npx cap add ios
           npx cap sync ios
+          # Ersetzt die Standard-ID sicher durch deine, ohne die Datei zu zerstören!
+          sed -i '' 's/com.capacitorjs.app/de.bommes.dashboard/g' ios/App/App.xcodeproj/project.pbxproj
       - name: 4. Face ID Berechtigung injizieren
         script: |
           /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID für den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
-      - name: 5. Build (.ipa) mit ultimativen Compiler-Flags
+      - name: 5. Apple Zertifikate erzwingen & anwenden
+        script: |
+          keychain initialize
+          # Zwingt Apple gnadenlos, das Profil jetzt zu erstellen
+          app-store-connect fetch-signing-files "de.bommes.dashboard" --type IOS_APP_STORE --create
+          keychain add-certificates
+          cd ios/App
+          # Da die Datei nicht mehr korrupt ist, klappt use-profiles jetzt fehlerfrei
+          xcode-project use-profiles
+      - name: 6. Build (.ipa)
         script: |
           cd ios/App
-          xcode-project build-ipa --project App.xcodeproj --scheme App --archive-flags="PRODUCT_BUNDLE_IDENTIFIER=de.bommes.dashboard PROVISIONING_PROFILE_SPECIFIER='${CM_PROVISIONING_PROFILE}' CODE_SIGN_IDENTITY='${CM_CERTIFICATE_NAME}' CODE_SIGN_STYLE=Manual"
+          xcode-project build-ipa --project App.xcodeproj --scheme App
           
     artifacts:
       - ios/App/build/ios/ipa/*.ipa
