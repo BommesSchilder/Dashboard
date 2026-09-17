@@ -5,7 +5,9 @@ workflows:
     environment:
       node: latest
       xcode: latest
-      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: de.bommes.dashboard
     scripts:
       - name: 1. Pakete & Capacitor installieren
         script: |
@@ -15,7 +17,7 @@ workflows:
         script: |
           mkdir -p www
           echo "<html><body>Bommes App</body></html>" > www/index.html
-      - name: 3. iOS-Projekt nativ (mit SPM) generieren
+      - name: 3. iOS-Projekt nativ generieren
         script: |
           rm -rf ios
           npx cap add ios
@@ -23,7 +25,13 @@ workflows:
       - name: 4. Face ID Berechtigung injizieren
         script: |
           /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID für den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
-      - name: 5. Compile iOS App (Xcode Native)
+      - name: 5. Code Signing & Build (.ipa)
         script: |
           cd ios/App
-          xcodebuild build -project App.xcodeproj -scheme App -destination "generic/platform=iOS" CODE_SIGNING_ALLOWED=NO
+          xcode-project build-ipa --project App.xcodeproj --scheme App
+    artifacts:
+      - ios/App/build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
