@@ -3,16 +3,14 @@ workflows:
     name: Bommes Dashboard iOS
     instance_type: mac_mini_m1
     
-    # HIER DEN NAMEN DEINER INTEGRATION EINTRAGEN (z.B. "Apple API")
+    # HIER WIEDER DEINEN NAMEN EINTRAGEN:
     integrations:
       app_store_connect: "Codemagic Build Server"
       
     environment:
       node: latest
       xcode: latest
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: de.bommes.dashboard
+      
     scripts:
       - name: 1. Pakete & Capacitor installieren
         script: |
@@ -30,10 +28,18 @@ workflows:
       - name: 4. Face ID Berechtigung injizieren
         script: |
           /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID für den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
-      - name: 5. Code Signing & Build (.ipa)
+      - name: 5. Zertifikate ZWINGEND generieren & laden
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "de.bommes.dashboard" --type IOS_APP_STORE --create
+          keychain add-certificates
+          cd ios/App
+          xcode-project use-profiles
+      - name: 6. Code Signing & Build (.ipa)
         script: |
           cd ios/App
           xcode-project build-ipa --project App.xcodeproj --scheme App
+          
     artifacts:
       - ios/App/build/ios/ipa/*.ipa
     publishing:
