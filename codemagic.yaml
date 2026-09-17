@@ -3,18 +3,15 @@ workflows:
     name: Bommes Dashboard iOS
     instance_type: mac_mini_m1
     
-    # HIER WIEDER DEINEN NAMEN EINTRAGEN:
+    # HIER DEINEN INTEGRATIONS-NAMEN EINTRAGEN:
     integrations:
       app_store_connect: "Codemagic Build Server"
       
     environment:
       node: latest
       xcode: latest
-      # Lädt die Zertifikate über deinen API-Schlüssel global in den Zwischenspeicher des Macs
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: de.bommes.dashboard
-        
+      # ios_signing wurde hier absichtlich entfernt!
+      
     scripts:
       - name: 1. Pakete & Capacitor installieren
         script: |
@@ -32,12 +29,20 @@ workflows:
       - name: 4. Face ID Berechtigung injizieren
         script: |
           /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID für den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
-      - name: 5. Bundle-ID & Zertifikate in Xcode erzwingen
+      - name: 5. Zertifikate ZWINGEND erstellen & aktivieren
         script: |
+          # 1. Schlüsselbund auf dem Mac vorbereiten
+          keychain initialize
+          
+          # 2. Zertifikate bei Apple erzwingen (--create) und sofort in den Speicher laden (source)
+          source <(app-store-connect fetch-signing-files "de.bommes.dashboard" --type IOS_APP_STORE --create)
+          
+          # 3. Das geladene Zertifikat auf dem Mac installieren
+          keychain add-certificates
+          
+          # 4. Dem Xcode-Projekt die Bundle-ID und das Zertifikat aufzwingen
           cd ios/App
-          # Zur Sicherheit: Überschreibt jede falsche Bundle-ID direkt im Apple-Quellcode
           sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = .*/PRODUCT_BUNDLE_IDENTIFIER = de.bommes.dashboard;/g' App.xcodeproj/project.pbxproj
-          # Zwingt das frische Projekt, die vorab geladenen Zertifikate zu nutzen
           xcode-project use-profiles
       - name: 6. Code Signing & Build (.ipa)
         script: |
@@ -49,4 +54,4 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
+        submit_to_testflight: trueflight: true
