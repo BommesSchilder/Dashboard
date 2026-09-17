@@ -2,6 +2,11 @@ workflows:
   ios-app:
     name: Bommes Dashboard iOS
     instance_type: mac_mini_m1
+    
+    # HIER DEN NAMEN DEINER INTEGRATION EINTRAGEN (z.B. "Apple API")
+    integrations:
+      app_store_connect: "Codemagic Build Server"
+      
     environment:
       node: latest
       xcode: latest
