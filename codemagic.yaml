@@ -3,6 +3,7 @@ workflows:
     name: Bommes Dashboard iOS
     instance_type: mac_mini_m1
     
+    # HIER DEINEN NAMEN EINTRAGEN:
     integrations:
       app_store_connect: "Codemagic Build Server"
       
@@ -18,7 +19,9 @@ workflows:
         script: |
           npm init -y
           
-          # NEU: Wir schreiben die Capacitor-Konfiguration direkt und fehlerfrei selbst!
+          # FIX: Capacitor auf v5 pinnen, aber das Plugin auf 'latest' setzen!
+          npm install @capacitor/cli@5 @capacitor/core@5 @capacitor/ios@5 capacitor-native-biometric@latest --save
+          
           echo '{
             "appId": "de.bommes.dashboard",
             "appName": "Bommes Dashboard",
@@ -29,16 +32,13 @@ workflows:
           mkdir -p www
           echo "<html><body>Bommes App</body></html>" > www/index.html
           
-          # Pakete installieren
-          npm install @capacitor/cli@5 @capacitor/core@5 @capacitor/ios@5 capacitor-native-biometric@5 --save
-          
-      - name: 2. iOS Projekt generieren & Version hochzaehlen
+      - name: 2. iOS Projekt generieren
         script: |
           rm -rf ios
           
-          # FIX: Direkter Pfad zur Datei - umgeht jeden npx-Bug!
-          ./node_modules/.bin/cap add ios
-          ./node_modules/.bin/cap sync ios
+          # Da npm install jetzt klappt, funktioniert npx cap wieder einwandfrei!
+          npx cap add ios
+          npx cap sync ios
           
           /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID fuer den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
           
