@@ -3,7 +3,6 @@ workflows:
     name: Bommes Dashboard iOS
     instance_type: mac_mini_m1
     
-    # HIER DEINEN NAMEN EINTRAGEN:
     integrations:
       app_store_connect: "Codemagic Build Server"
       
@@ -18,8 +17,6 @@ workflows:
       - name: 1. Umgebung & Pakete
         script: |
           npm init -y
-          
-          # FIX: Capacitor auf v5 pinnen, aber das Plugin auf 'latest' setzen!
           npm install @capacitor/cli@5 @capacitor/core@5 @capacitor/ios@5 capacitor-native-biometric@latest --save
           
           echo '{
@@ -35,14 +32,10 @@ workflows:
       - name: 2. iOS Projekt generieren
         script: |
           rm -rf ios
-          
-          # Da npm install jetzt klappt, funktioniert npx cap wieder einwandfrei!
           npx cap add ios
           npx cap sync ios
           
           /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID fuer den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
-          
-          # Setzt die Version automatisch hoch (TestFlight-Fix)
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD_NUMBER" ios/App/App/Info.plist
           
       - name: 3. Code Signing anwenden
@@ -53,7 +46,8 @@ workflows:
       - name: 4. Build (.ipa)
         script: |
           cd ios/App
-          xcode-project build-ipa --project App.xcodeproj --scheme App
+          # HIER IST DER FIX: workspace statt project!
+          xcode-project build-ipa --workspace App.xcworkspace --scheme App
           
     artifacts:
       - ios/App/build/ios/ipa/*.ipa
