@@ -11,42 +11,49 @@ workflows:
       xcode: latest
       
     scripts:
-      - name: 1. Pakete & Capacitor installieren
+      - name: 1. Umgebung vorbereiten (Node & Web-Ordner)
         script: |
           npm install
           npm install @capacitor/cli @capacitor/core @capacitor/ios capacitor-native-biometric
-      - name: 2. Dummy-Webordner erstellen
-        script: |
           mkdir -p www
           echo "<html><body>Bommes App</body></html>" > www/index.html
-      - name: 3. iOS-Projekt nativ generieren
+          
+      - name: 2. iOS Projekt mit richtiger ID generieren
         script: |
-          # Ändert die ID in der Config, BEVOR iOS gebaut wird. Das ist zu 100 % sicher.
+          # Wir setzen deine ID, BEVOR iOS gebaut wird. Das verhindert alle Konflikte.
           sed -i '' 's/com.capacitorjs.app/de.bommes.dashboard/g' capacitor.config.json || true
-          sed -i '' 's/com.capacitorjs.app/de.bommes.dashboard/g' capacitor.config.ts || true
+          
+          # iOS Ordner frisch generieren
           rm -rf ios
           npx cap add ios
           npx cap sync ios
-      - name: 4. Face ID Berechtigung injizieren
-        script: |
+          
+          # Face ID Berechtigung setzen
           /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID für den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
-      - name: 5. Apple Zertifikate herunterladen und anwenden
+          
+      - name: 3. Zertifikate holen UND sofort bauen (All-in-One)
         script: |
+          # Schlüsselbund initialisieren
           keychain initialize
-          # HIER WAR MEIN FEHLER: Das "source <( )" speichert das Zertifikat für Schritt 6!
+          
+          # Zertifikat bei Apple erzwingen und im aktuellen Skript-Gedächtnis speichern!
           source <(app-store-connect fetch-signing-files "de.bommes.dashboard" --type IOS_APP_STORE --create)
+          
+          # Zertifikat dem Mac übergeben
           keychain add-certificates
           
+          # Zum Projekt wechseln
           cd ios/App
-          # Schaltet die Xcode-Automatik ab und wendet das geladene Profil an
+          
+          # Xcode anweisen, das geladene Zertifikat zu nutzen
           xcode-project use-profiles
-      - name: 6. Build (.ipa)
-        script: |
-          cd ios/App
+          
+          # Da wir noch im selben Schritt sind, klappt das Bauen jetzt fehlerfrei!
           xcode-project build-ipa --project App.xcodeproj --scheme App
           
     artifacts:
       - ios/App/build/ios/ipa/*.ipa
+      
     publishing:
       app_store_connect:
         auth: integration
