@@ -10,7 +10,11 @@ workflows:
     environment:
       node: latest
       xcode: latest
-      
+      # Lädt die Zertifikate über deinen API-Schlüssel global in den Zwischenspeicher des Macs
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: de.bommes.dashboard
+        
     scripts:
       - name: 1. Pakete & Capacitor installieren
         script: |
@@ -28,12 +32,12 @@ workflows:
       - name: 4. Face ID Berechtigung injizieren
         script: |
           /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID für den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
-      - name: 5. Zertifikate ZWINGEND generieren & laden
+      - name: 5. Bundle-ID & Zertifikate in Xcode erzwingen
         script: |
-          keychain initialize
-          app-store-connect fetch-signing-files "de.bommes.dashboard" --type IOS_APP_STORE --create
-          keychain add-certificates
           cd ios/App
+          # Zur Sicherheit: Überschreibt jede falsche Bundle-ID direkt im Apple-Quellcode
+          sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = .*/PRODUCT_BUNDLE_IDENTIFIER = de.bommes.dashboard;/g' App.xcodeproj/project.pbxproj
+          # Zwingt das frische Projekt, die vorab geladenen Zertifikate zu nutzen
           xcode-project use-profiles
       - name: 6. Code Signing & Build (.ipa)
         script: |
