@@ -3,23 +3,24 @@ workflows:
     name: Bommes Dashboard iOS
     instance_type: mac_mini_m1
     
-    # HIER DEINEN NAMEN EINTRAGEN:
     integrations:
       app_store_connect: "Codemagic Build Server"
       
     environment:
       node: latest
       xcode: latest
-      # Holt sich die Zertifikate nun sicher aus dem Codemagic-Tresor
       ios_signing:
         distribution_type: app_store
         bundle_identifier: de.bommes.dashboard
         
     scripts:
-      - name: 1. Umgebung vorbereiten
+      - name: 1. Umgebung & Pakete ERZWINGEN
         script: |
-          npm install
-          npm install @capacitor/cli @capacitor/core @capacitor/ios capacitor-native-biometric
+          # Erstellt eine saubere Projekt-Datei, falls sie fehlt
+          npm init -y
+          # Installiert alle Pakete und speichert sie ZWINGEND ab
+          npm install @capacitor/cli @capacitor/core @capacitor/ios capacitor-native-biometric --save
+          
           mkdir -p www
           echo "<html><body>Bommes App</body></html>" > www/index.html
       - name: 2. iOS Projekt nativ generieren
@@ -27,8 +28,11 @@ workflows:
           sed -i '' 's/com.capacitorjs.app/de.bommes.dashboard/g' capacitor.config.json || true
           rm -rf ios
           npx cap add ios
+          
+          # Sync liest jetzt die Datei und verknuepft das Biometrie-Plugin!
           npx cap sync ios
-          /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID für den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
+          
+          /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID fuer den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
       - name: 3. Code Signing anwenden
         script: |
           cd ios/App
