@@ -19,15 +19,20 @@ workflows:
           npm init -y
           npm install @capacitor/cli@5 @capacitor/core@5 @capacitor/ios@5 capacitor-native-biometric@latest --save
           
+          # HIER IST DER FIX: Der Server-Block lädt jetzt dein Live-PHP-Dashboard!
           echo '{
             "appId": "de.bommes.dashboard",
             "appName": "Bommes Dashboard",
             "webDir": "www",
-            "bundledWebRuntime": false
+            "bundledWebRuntime": false,
+            "server": {
+              "url": "https://www.xpress-zulassung.de/backend/dashboard.php",
+              "cleartext": true
+            }
           }' > capacitor.config.json
           
           mkdir -p www
-          echo "<html><body>Bommes App</body></html>" > www/index.html
+          echo "<html><body>Lade Dashboard...</body></html>" > www/index.html
           
       - name: 2. iOS Projekt generieren
         script: |
