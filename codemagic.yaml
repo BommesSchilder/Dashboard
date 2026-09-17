@@ -3,14 +3,14 @@ workflows:
     name: Bommes Dashboard iOS
     instance_type: mac_mini_m1
     
-    # HIER DEINEN INTEGRATIONSNAMEN EINTRAGEN:
+    # HIER WIEDER DEINEN NAMEN EINTRAGEN:
     integrations:
       app_store_connect: "Codemagic Build Server"
       
     environment:
       node: latest
       xcode: latest
-      # Die Automatik findet das Profil jetzt, weil wir es vorhin erfolgreich erstellt haben!
+      # Lädt die Zertifikate als $CM-Variablen in den Hintergrund
       ios_signing:
         distribution_type: app_store
         bundle_identifier: de.bommes.dashboard
@@ -32,19 +32,18 @@ workflows:
       - name: 4. Face ID Berechtigung injizieren
         script: |
           /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID für den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
-      - name: 5. Code Signing anwenden
+      - name: 5. Build (.ipa) mit ultimativen Compiler-Flags
         script: |
           cd ios/App
-          # Wendet die automatisch geladenen Zertifikate sauber auf das frische Projekt an
-          xcode-project use-profiles
-      - name: 6. Build (.ipa)
-        script: |
-          cd ios/App
-          xcode-project build-ipa --project App.xcodeproj --scheme App
+          # Wir zwingen den Compiler, unsere Zertifikate und die Bundle-ID zu nutzen!
+          xcode-project build-ipa \
+            --project App.xcodeproj \
+            --scheme App \
+            --archive-flags="PRODUCT_BUNDLE_IDENTIFIER=de.bommes.dashboard PROVISIONING_PROFILE_SPECIFIER='${CM_PROVISIONING_PROFILE}' CODE_SIGN_IDENTITY='${CM_CERTIFICATE_NAME}' CODE_SIGN_STYLE=Manual"
           
     artifacts:
       - ios/App/build/ios/ipa/*.ipa
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
+        submit_to_testflight: trueue
