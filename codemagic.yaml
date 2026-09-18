@@ -17,7 +17,8 @@ workflows:
       - name: 1. Umgebung & Pakete
         script: |
           npm init -y
-          npm install @capacitor/cli@5 @capacitor/core@5 @capacitor/ios@5 capacitor-native-biometric@latest --save
+          # Wir installieren das offizielle Icon-Tool direkt mit!
+          npm install @capacitor/cli@5 @capacitor/core@5 @capacitor/ios@5 capacitor-native-biometric@latest @capacitor/assets@latest --save
           
           echo '{
             "appId": "de.bommes.dashboard",
@@ -33,30 +34,24 @@ workflows:
           mkdir -p www
           echo "<html><body>Lade Dashboard...</body></html>" > www/index.html
           
-      - name: 2. iOS Projekt mit eigenem Logo sicher generieren
+      - name: 2. iOS Projekt frisch generieren & Icons erstellen
         script: |
-          # 1. SICHERUNG: Eigenes Logo vor der Löschung in einen sicheren Temp-Ordner retten
-          mkdir -p /tmp/my_icons
-          if [ -d "ios/App/App/Assets.xcassets/AppIcon.appiconset" ]; then
-            cp -r ios/App/App/Assets.xcassets/AppIcon.appiconset /tmp/my_icons/
-          fi
-          
-          # 2. FRISCHES PROJEKT: Generiert das iOS Projekt samt fehlendem Podfile komplett neu
+          # Löscht alte/fehlerhafte iOS Dateien und baut das Grundgerüst komplett neu
           rm -rf ios
           npx cap add ios
           npx cap sync ios
           
-          # 3. LOGO WIEDERHERSTELLEN: Das gerettete Logo wieder einfügen
-          if [ -d "/tmp/my_icons/AppIcon.appiconset" ]; then
-            rm -rf ios/App/App/Assets.xcassets/AppIcon.appiconset
-            cp -r /tmp/my_icons/AppIcon.appiconset ios/App/App/Assets.xcassets/
-          fi
+          # HIER IST DIE MAGIE: Generiert aus deiner assets/icon.png alle 100% korrekten Apple-Icons!
+          npx @capacitor/assets generate --ios
           
-          # 4. FACE ID Erlaubnis eintragen
-          /usr/libexec/PlistBuddy -c "Set :NSFaceIDUsageDescription 'Wir nutzen Face ID fuer den sicheren Login ins Dashboard.'" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID fuer den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
+          # FEHLENDEN APPLE-EINTRAG FÜR DAS ICON SETZEN (Löst Error 90713)
+          /usr/libexec/PlistBuddy -c "Add :CFBundleIconName string 'AppIcon'" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Set :CFBundleIconName 'AppIcon'" ios/App/App/Info.plist
+          
+          # FACE ID Erlaubnis eintragen
+          /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID fuer den sicheren Login ins Dashboard.'" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Set :NSFaceIDUsageDescription 'Wir nutzen Face ID fuer den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
           
           # Build-Nummer hochzählen
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD_NUMBER" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD_NUMBER" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/App/App/Info.plist
           
       - name: 3. CocoaPods installieren (Baut Face ID ein)
         script: |
