@@ -33,23 +33,27 @@ workflows:
           mkdir -p www
           echo "<html><body>Lade Dashboard...</body></html>" > www/index.html
           
-      - name: 2. iOS Projekt synchronisieren (OHNE LÖSCHEN)
+      - name: 2. iOS Projekt synchronisieren
         script: |
-          # Die Befehle rm -rf ios und npx cap add ios wurden entfernt, damit dein Logo erhalten bleibt!
           npx cap sync ios
           
-          # Sicherer Eintrag für Face ID (Setzt den Wert, falls vorhanden, oder fügt ihn neu hinzu)
+          # Sicherer Eintrag für Face ID
           /usr/libexec/PlistBuddy -c "Set :NSFaceIDUsageDescription 'Wir nutzen Face ID fuer den sicheren Login ins Dashboard.'" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID fuer den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
           
           # Build-Nummer hochzählen
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD_NUMBER" ios/App/App/Info.plist
           
-      - name: 3. Code Signing anwenden
+      - name: 3. CocoaPods installieren (Generiert den Workspace)
+        script: |
+          cd ios/App
+          pod install --repo-update
+          
+      - name: 4. Code Signing anwenden
         script: |
           cd ios/App
           xcode-project use-profiles
           
-      - name: 4. Build (.ipa)
+      - name: 5. Build (.ipa)
         script: |
           cd ios/App
           xcode-project build-ipa --workspace App.xcworkspace --scheme App
