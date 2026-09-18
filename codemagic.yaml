@@ -33,17 +33,32 @@ workflows:
           mkdir -p www
           echo "<html><body>Lade Dashboard...</body></html>" > www/index.html
           
-      - name: 2. iOS Projekt synchronisieren
+      - name: 2. iOS Projekt mit eigenem Logo sicher generieren
         script: |
+          # 1. SICHERUNG: Eigenes Logo vor der Löschung in einen sicheren Temp-Ordner retten
+          mkdir -p /tmp/my_icons
+          if [ -d "ios/App/App/Assets.xcassets/AppIcon.appiconset" ]; then
+            cp -r ios/App/App/Assets.xcassets/AppIcon.appiconset /tmp/my_icons/
+          fi
+          
+          # 2. FRISCHES PROJEKT: Generiert das iOS Projekt samt fehlendem Podfile komplett neu
+          rm -rf ios
+          npx cap add ios
           npx cap sync ios
           
-          # Sicherer Eintrag für Face ID
+          # 3. LOGO WIEDERHERSTELLEN: Das gerettete Logo wieder einfügen
+          if [ -d "/tmp/my_icons/AppIcon.appiconset" ]; then
+            rm -rf ios/App/App/Assets.xcassets/AppIcon.appiconset
+            cp -r /tmp/my_icons/AppIcon.appiconset ios/App/App/Assets.xcassets/
+          fi
+          
+          # 4. FACE ID Erlaubnis eintragen
           /usr/libexec/PlistBuddy -c "Set :NSFaceIDUsageDescription 'Wir nutzen Face ID fuer den sicheren Login ins Dashboard.'" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID fuer den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
           
           # Build-Nummer hochzählen
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD_NUMBER" ios/App/App/Info.plist
           
-      - name: 3. CocoaPods installieren (Generiert den Workspace)
+      - name: 3. CocoaPods installieren (Baut Face ID ein)
         script: |
           cd ios/App
           pod install --repo-update
