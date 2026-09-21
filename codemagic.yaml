@@ -14,8 +14,10 @@ workflows:
         bundle_identifier: de.bommes.dashboard
         
     scripts:
-      - name: 1. Umgebung & Pakete
+      - name: 1. Setup, Generierung & CocoaPods
         script: |
+          set -e
+          
           npm init -y
           npm install @capacitor/cli@5 @capacitor/core@5 @capacitor/ios@5 capacitor-native-biometric@latest @capacitor/assets@latest --save
           
@@ -33,35 +35,33 @@ workflows:
           mkdir -p www
           echo "<html><body>Lade Dashboard...</body></html>" > www/index.html
           
-      - name: 2. iOS Projekt frisch generieren & Icons erstellen
-        script: |
           rm -rf ios
           npx cap add ios
           npx cap sync ios
           
-          # HIER IST DER FIX: Setzt die Minimum OS Version automatisch auf iOS 15.0
+          if [ ! -d "ios/App" ]; then
+            echo "Fehler: ios/App Verzeichnis wurde nicht erstellt!"
+            exit 1
+          fi
+          
           sed -i '' "s/platform :ios, '13.0'/platform :ios, '15.0'/g" ios/App/Podfile
           sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = 13.0/IPHONEOS_DEPLOYMENT_TARGET = 15.0/g' ios/App/App.xcodeproj/project.pbxproj
           
-          # Generiert aus assets/icon.png alle korrekten Apple-Icons
           npx @capacitor/assets generate --ios
           
-          # Info.plist Configs
           /usr/libexec/PlistBuddy -c "Add :CFBundleIconName string 'AppIcon'" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Set :CFBundleIconName 'AppIcon'" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Wir nutzen Face ID fuer den sicheren Login ins Dashboard.'" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Set :NSFaceIDUsageDescription 'Wir nutzen Face ID fuer den sicheren Login ins Dashboard.'" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD_NUMBER" ios/App/App/Info.plist || /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/App/App/Info.plist
           
-      - name: 3. CocoaPods installieren (Workspace generieren)
-        script: |
           cd ios/App
           pod install --repo-update
           
-      - name: 4. Code Signing anwenden
+      - name: 2. Code Signing anwenden
         script: |
           cd ios/App
           xcode-project use-profiles
           
-      - name: 5. Build (.ipa)
+      - name: 3. Build (.ipa)
         script: |
           cd ios/App
           xcode-project build-ipa --workspace App.xcworkspace --scheme App
