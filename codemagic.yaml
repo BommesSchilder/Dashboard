@@ -7,7 +7,7 @@ workflows:
       app_store_connect: "Codemagic Build Server"
       
     environment:
-      node: 20  # HIER IST DER FIX: Stabile Version statt experimenteller "latest" Version
+      node: 20  # Stabile Version statt experimenteller "latest" Version
       xcode: latest
       ios_signing:
         distribution_type: app_store
@@ -19,7 +19,8 @@ workflows:
           set -e
           
           npm init -y
-          npm install @capacitor/cli@5 @capacitor/core@5 @capacitor/ios@5 capacitor-native-biometric@latest @capacitor/assets@latest --save
+          # HINZUGEFÜGT: @capacitor/browser@5
+          npm install @capacitor/cli@5 @capacitor/core@5 @capacitor/ios@5 @capacitor/browser@5 capacitor-native-biometric@latest @capacitor/assets@latest --save
           
           echo '{
             "appId": "de.bommes.dashboard",
@@ -37,15 +38,19 @@ workflows:
           
           rm -rf ios
           npx cap add ios
-          npx cap sync ios
           
           if [ ! -d "ios/App" ]; then
             echo "Fehler: ios/App Verzeichnis wurde nicht erstellt!"
             exit 1
           fi
           
+          # HIER DIE GEÄNDERTE REIHENFOLGE:
+          # 1. Erst die iOS Version auf 15.0 anheben...
           sed -i '' "s/platform :ios, '13.0'/platform :ios, '15.0'/g" ios/App/Podfile
           sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = 13.0/IPHONEOS_DEPLOYMENT_TARGET = 15.0/g' ios/App/App.xcodeproj/project.pbxproj
+          
+          # 2. ...und ERST DANN die Plugins verknüpfen!
+          npx cap sync ios
           
           npx @capacitor/assets generate --ios
           
